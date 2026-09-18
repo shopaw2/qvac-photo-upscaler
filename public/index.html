@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>QVAC Photo Upscaler</title>
+<style>
+  body { font-family: sans-serif; background: #1a1a1a; color: #eee; text-align: center; padding: 40px; }
+  h1 { margin-bottom: 5px; }
+  p.sub { color: #999; margin-top: 0; }
+  #dropzone {
+    border: 3px dashed #555; border-radius: 12px; padding: 60px 20px;
+    max-width: 500px; margin: 30px auto; cursor: pointer; transition: 0.2s;
+  }
+  #dropzone.dragover { border-color: #4caf50; background: #222; }
+  #results { display: flex; justify-content: center; gap: 30px; margin-top: 30px; flex-wrap: wrap; }
+  .imgbox { max-width: 300px; }
+  .imgbox img { max-width: 100%; border-radius: 8px; border: 1px solid #444; }
+  .imgbox h3 { margin-bottom: 5px; }
+  #status { margin-top: 15px; color: #4caf50; }
+</style>
+</head>
+<body>
+  <h1>QVAC Photo Upscaler</h1>
+  <p class="sub">On-device 4x upscaling — no cloud, no API key. Powered by @qvac/sdk.</p>
+
+  <div id="dropzone">
+    Drag & drop an image here, or click to select
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+  </div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+<script>
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const status = document.getElementById('status');
+  const results = document.getElementById('results');
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) handleFile(fileInput.files[0]);
+  });
+
+  async function handleFile(file) {
+    results.innerHTML = '';
+    status.textContent = 'Upscaling on-device, please wait...';
+
+    const originalUrl = URL.createObjectURL(file);
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await fetch('/upscale', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Upscale failed');
+      const blob = await res.blob();
+      const upscaledUrl = URL.createObjectURL(blob);
+
+      results.innerHTML = `
+        <div class="imgbox"><h3>Before</h3><img src="${originalUrl}"></div>
+        <div class="imgbox"><h3>After (4x)</h3><img src="${upscaledUrl}"></div>
+      `;
+      status.textContent = 'Done!';
+    } catch (err) {
+      status.textContent = 'Error: ' + err.message;
+    }
+  }
+</script>
+</body>
+</html>
